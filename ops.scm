@@ -192,14 +192,19 @@
         (Edit start end "" start start))))
 
 ;;@doc
-;; `A-l` / `A-h`: swap the current node with its next / previous sibling,
-;; keeping the gap between them as it was. The node stays selected, so
-;; repeating the key carries it along. Refuses to swap with a comment (moving
-;; code onto a comment's line would comment it out).
+;; `A-l` / `A-h`: swap the current node with the next / previous sibling,
+;; stepping over comments. Everything between the two (gaps, comments, line
+;; breaks) stays where it is, so no code can end up after a comment on its
+;; line. The node stays selected, so repeating the key carries it along.
+;; Refuses when the current node is itself a comment.
 (define (swap ctx node direction)
-  (let ([other (if (equal? direction 'next) (next-sibling node) (prev-sibling node))])
+  (let ([other (let loop ([n (if (equal? direction 'next) (next-sibling node) (prev-sibling node))])
+                 (cond
+                   [(not n) #f]
+                   [(comment? ctx n) (loop (if (equal? direction 'next) (next-sibling n) (prev-sibling n)))]
+                   [else n]))])
     (and other
-         (comment-safe? ctx node other)
+         (not (comment? ctx node))
          (let* ([first (if (equal? direction 'next) node other)]
                 [second (if (equal? direction 'next) other node)]
                 [start (node-start ctx first)]

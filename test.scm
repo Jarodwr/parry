@@ -126,7 +126,11 @@
    (fixture "swap keeps the gap" "(f x\n   (g y))" "x" (lambda (ctx n) (swap ctx n 'next)) "(f (g y)\n   x)" "x")
    (fixture "swap forms" "(a (b c) d)" "(b c)" (lambda (ctx n) (swap ctx n 'next)) "(a d (b c))" "(b c)")
    (fixture "no swap past last" "(a b)" "b" (lambda (ctx n) (swap ctx n 'next)) 'none 'none)
-   (fixture "no swap with comment" "(a\n ; c\n b)" "a" (lambda (ctx n) (swap ctx n 'next)) 'none 'none)
+   (fixture "swap steps over a comment" "(a\n ; c\n b)" "a" (lambda (ctx n) (swap ctx n 'next)) "(b\n ; c\n a)" "a")
+   (fixture "swap top-level forms past comments" ";; one\n(local a 1)\n\n;; two\n(local b 2)\n" "(local a 1)" (lambda (ctx n) (swap ctx n 'next)) ";; one\n(local b 2)\n\n;; two\n(local a 1)\n" "(local a 1)")
+   (fixture "swap back at top level" "(local a 1)\n;; two\n(local b 2)\n" "(local b 2)" (lambda (ctx n) (swap ctx n 'prev)) "(local b 2)\n;; two\n(local a 1)\n" "(local b 2)")
+   (fixture "swap keeps a trailing comment in place" "(f x ; note\n   y)" "x" (lambda (ctx n) (swap ctx n 'next)) "(f y ; note\n   x)" "x")
+   (fixture "no swap of a comment" "(a\n ; c\n b)" "; c" (lambda (ctx n) (swap ctx n 'next)) 'none 'none)
    ;; layout
    (fixture "expand after node" "(a b c)" "a" toggle-layout "(a\n  b\n  c)" "a")
    (fixture "collapse after node" "(a\n  b\n  c)" "a" toggle-layout "(a b c)" "a")

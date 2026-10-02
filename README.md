@@ -72,7 +72,7 @@ and press your enter key again.
 | `;` | `parry-new-comment` | New comment line above the node |
 | `s` / `S` | `parry-slurp-forward` / `-backward` | Enclosing form takes in the next / previous sibling |
 | `b` / `B` | `parry-barf-forward` / `-backward` | Push the form's last / first element out |
-| `A-l` / `A-h` | `parry-swap-next` / `parry-swap-prev` | Swap the node with its next / previous sibling (it stays selected, so repeat to keep moving it; won't swap with a comment) |
+| `A-l` / `A-h` | `parry-swap-next` / `parry-swap-prev` | Swap the node with its next / previous sibling (it stays selected, so repeat to keep moving it; steps over comments, which stay where they are) |
 | `r` | `parry-raise` | Replace the parent form with the node |
 | `w` | `parry-wrap` | Wrap the node in the dialect's first bracket pair |
 | `W` | `parry-splice` | Remove the enclosing form's brackets |
