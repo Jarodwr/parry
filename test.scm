@@ -14,10 +14,13 @@
 (provide parry-self-test
          parry-test-results)
 
+;; the dialect the fixtures currently run under
+(define *dialect* #f)
+
 (define (ctx-for text-string)
   (let* ([rope (text.string->rope text-string)]
-         [syntax (rope->tssyntax rope "fennel")])
-    (Ctx (dialect-named "fennel") rope (tstree->root (tssyntax->tree syntax)))))
+         [syntax (rope->tssyntax rope (Dialect-language *dialect*))])
+    (Ctx *dialect* rope (tstree->root (tssyntax->tree syntax)))))
 
 ;; index of the `nth` (0-based) occurrence of `needle` in `hay`, or #f
 (define (string-index hay needle nth)
@@ -137,14 +140,27 @@
 
 ;;@doc
 ;; Run every fixture; returns (passed failed-names).
-(define (parry-test-results)
+;; Run every fixture under dialect `d`; returns (passed failed-names).
+(define (run-fixtures d)
+  (set! *dialect* d)
   (let loop ([fs fixtures] [passed 0] [failed '()])
     (if (null? fs)
         (list passed (reverse failed))
         (let* ([r (run-fixture (car fs))]
-               [ok (car r)])
-          (log::info! (to-string "PARRY-TEST" (if ok "ok  " "FAIL") (cadr r) "--" (caddr r)))
-          (loop (cdr fs) (if ok (+ passed 1) passed) (if ok failed (cons (cadr r) failed)))))))
+               [ok (car r)]
+               [name (to-string (cadr r) "[" (Dialect-name d) "]")])
+          (log::info! (to-string "PARRY-TEST" (if ok "ok  " "FAIL") name "--" (caddr r)))
+          (loop (cdr fs) (if ok (+ passed 1) passed) (if ok failed (cons name failed)))))))
+
+;;@doc
+;; Run every fixture under each Fennel dialect Helix has a grammar for;
+;; returns (passed failed-names).
+(define (parry-test-results)
+  (let loop ([ds (dialects-for-extension "fnl")] [passed 0] [failed '()])
+    (if (null? ds)
+        (list passed failed)
+        (let ([r (run-fixtures (car ds))])
+          (loop (cdr ds) (+ passed (car r)) (append failed (cadr r)))))))
 
 ;;@doc
 ;; Run Parry's self-test; details go to the Helix log.

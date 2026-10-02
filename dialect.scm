@@ -6,6 +6,7 @@
 
 (require "helix/editor.scm")
 (require "helix/treesitter.scm")
+(require-builtin helix/core/text as text.)
 
 (provide Dialect
          Dialect?
@@ -20,6 +21,8 @@
          define-parry-dialect
          dialect-named
          dialect-for-doc
+         dialects-for-extension
+         language-available?
          dialect-root
          path-extension)
 
@@ -29,9 +32,13 @@
 
 ;; name -> Dialect
 (define *dialects* (hash))
+;; names in registration order: for an extension, the first dialect whose
+;; language Helix can parse wins
+(define *order* '())
 
 ;;@doc
-;; Register (or replace) a dialect.
+;; Register (or replace) a dialect. Several dialects may claim an extension;
+;; the first registered whose language Helix has a grammar for is used.
 ;;
 ;; * extensions    : file extensions (no dot) this dialect applies to
 ;; * language      : Helix language name used to parse the buffer. When it is
@@ -51,11 +58,34 @@
                               #:comment (comment ";")
                               #:comment-kinds (comment-kinds '("comment"))
                               #:string-kinds (string-kinds '("string")))
+  (unless (hash-contains? *dialects* name)
+    (set! *order* (append *order* (list name))))
   (set! *dialects*
         (hash-insert *dialects*
                      name
                      (Dialect name extensions language containers brackets comment comment-kinds
                               string-kinds))))
+
+;; language name -> #t/#f, filled on first use
+(define *available* (hash))
+
+;;@doc
+;; Whether Helix has a grammar for language `name` (e.g. "fennel-sexp", which
+;; only some builds add). Checked once per language.
+(define (language-available? name)
+  (if (hash-contains? *available* name)
+      (hash-ref *available* name)
+      (let ([ok (with-handler (lambda (_) #f)
+                              (and (rope->tssyntax (text.string->rope "") name) #t))])
+        (set! *available* (hash-insert *available* name ok))
+        ok)))
+
+;;@doc
+;; Dialects for file extension `ext` whose language Helix can parse, in
+;; registration order.
+(define (dialects-for-extension ext)
+  (filter (lambda (d) (and (member ext (Dialect-extensions d)) (language-available? (Dialect-language d))))
+          (map (lambda (name) (hash-ref *dialects* name)) *order*)))
 
 ;;@doc
 ;; The extension of `path` without its dot, or #f.
@@ -67,24 +97,19 @@
       [(equal? (string-ref path i) #\.) (substring path (+ i 1) (string-length path))]
       [else (loop (- i 1))])))
 
-(define (find-first pred lst)
-  (cond
-    [(null? lst) #f]
-    [(pred (car lst)) (car lst)]
-    [else (find-first pred (cdr lst))]))
-
 ;;@doc
 ;; The dialect registered under `name`, or #f.
 (define (dialect-named name)
   (hash-try-get *dialects* name))
 
 ;;@doc
-;; The dialect for document `doc-id`, by file extension, or #f.
+;; The dialect for document `doc-id`: the first registered for its file
+;; extension whose language Helix can parse, or #f.
 (define (dialect-for-doc doc-id)
   (let* ([path (and doc-id (editor-document->path doc-id))]
-         [ext (and path (path-extension path))])
-    (and ext
-         (find-first (lambda (d) (member ext (Dialect-extensions d))) (hash-values->list *dialects*)))))
+         [ext (and path (path-extension path))]
+         [ds (if ext (dialects-for-extension ext) '())])
+    (if (null? ds) #f (car ds))))
 
 ;;@doc
 ;; Root node of `rope`'s parse tree under dialect `d`, or #f.
