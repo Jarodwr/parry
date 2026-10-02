@@ -119,10 +119,15 @@ take the real ones from your grammar's `node-types.json`:
   #:string-kinds '("string"))
 ```
 
-Fennel ships in `dialects/fennel.scm`, for Helix's built-in Fennel grammar
-(`alexmozaidze/tree-sitter-fennel`). That grammar gives each special form its
-own node kind (`fn_form`, `let_form`, ...), so all 38 bracketed kinds are
-listed. Reader macros such as `#(...)`, `'x` and `` `x `` move and edit with
+Fennel ships in `dialects/fennel.scm` as two dialects. The preferred one
+parses with `fennel-sexp`, fennel-tools' plain s-expression grammar, which the
+`jarodwr/tap/helix-steel` build adds as a hidden language; it only knows lists,
+sequences and tables, so it copes better with half-written code. On Helix
+builds without it, Parry falls back to Helix's own `fennel` grammar
+(`alexmozaidze/tree-sitter-fennel`), which gives each special form its own node
+kind (`fn_form`, `let_form`, ...), so all 38 bracketed kinds are listed. For an
+extension, the first registered dialect whose language Helix has a grammar for
+is used. Reader macros such as `#(...)`, `'x` and `` `x `` move and edit with
 the form they prefix.
 
 When `#:language` is the buffer's own language, Parry uses Helix's live tree.
