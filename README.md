@@ -59,48 +59,97 @@ For development, run `forge install` in your checkout after each change (it
 copies the package into Steel's cogs folder), then `:config-reload` in Helix
 and press your enter key again.
 
-## Keys
+## Commands
 
-| Key | Command | Does |
+Every key below is also a typed command (`:parry-slurp-forward`, ...), so you
+can bind them anywhere, e.g. in Insert mode. In the examples, `«»` marks the
+selected node.
+
+### 1. Getting around
+
+Enough to read code structurally. You're always on one whole node, and these
+keys walk the tree.
+
+| Key | Command | What it does |
 |---|---|---|
-| `h` / `l` | `parry-prev` / `parry-next` | Previous / next sibling |
-| `j` / `J` | `parry-first-child` / `parry-last-child` | First / last child |
-| `k` | `parry-parent` | Enclosing form |
-| `i` / `a` | `parry-insert-before` / `parry-insert-after` | Add a space (or a new indented line, if the node sits on its own line), then Insert mode before / after the node |
-| `c` | `parry-change` | Replace the atom (not a form) with Insert mode |
-| `(` `)` `[` `]` `{` `}` | new form | Empty form before (open bracket) / after (close bracket) the node, Insert mode inside it. One pair per dialect bracket |
-| `;` | `parry-new-comment` | New comment line above the node |
-| `s` / `S` | `parry-slurp-forward` / `-backward` | Enclosing form takes in the next / previous sibling |
-| `b` / `B` | `parry-barf-forward` / `-backward` | Push the form's last / first element out |
-| `A-l` / `A-h` | `parry-swap-next` / `parry-swap-prev` | Swap the node with its next / previous sibling (it stays selected, so repeat to keep moving it; steps over comments, which stay where they are) |
-| `r` | `parry-raise` | Replace the parent form with the node |
-| `w` | `parry-wrap` | Wrap the node in the dialect's first bracket pair |
-| `W` | `parry-splice` | Remove the enclosing form's brackets |
-| `d` | `parry-delete` | Delete the node; select the next sibling, else the previous, else the parent |
-| `m` | `parry-toggle-layout` | Toggle the siblings after the node between one line and one per line (a top-level form: all its children) |
+| your key, e.g. `L` | `parry-enter` | Enter Parry. The node under the cursor gets selected |
+| `Esc` | `parry-exit` | Leave Parry, back to plain Helix |
+| `l` / `h` | `parry-next` / `parry-prev` | Next / previous node at this level |
+| `j` | `parry-first-child` | Into the node: its first child |
+| `J` | `parry-last-child` | Into the node: its last child |
+| `k` | `parry-parent` | Out: the form around this node |
 | `u` / `U` | `parry-undo` / `parry-redo` | Undo / redo, then select the node there |
-| `Esc` | | Leave Parry |
-| `:` `space` `v` | | Passed to Helix: typed commands, the space menu, Select mode |
 
-`A-` means Alt. On macOS your terminal has to send Option as Alt/Meta for
-these (e.g. Ghostty `macos-option-as-alt = true`, iTerm2 "Esc+" for Option).
+The first character of every other node at this level is highlighted, so you
+can see where `h`/`l` go.
 
-Change the pass-through keys with `(set-parry-pass-through! '(":" "space" "v" "g"))`.
-A passed-through key that starts a Helix key sequence (like `space`) keeps
-passing keys through until the sequence is complete.
+### 2. Typing
 
-Every command is also a typed command (`:parry-slurp-forward`, ...), so you
-can bind them in other modes too.
+Each of these drops you into Helix's Insert mode in the right place. `Esc`
+brings you back to Parry, with what you typed selected.
+
+| Key | Command | What it does | Example |
+|---|---|---|---|
+| `a` | `parry-insert-after` | Type a new node after this one | `(f «x»)` → `(f x ▏)` |
+| `i` | `parry-insert-before` | Type a new node before this one | `(f «x»)` → `(f ▏ x)` |
+| `c` | `parry-change` | Replace this atom (not a form) | `(f «x»)` → `(f ▏)` |
+| `)` / `(` | new form | New empty `()` after / before this node, typing inside it | `(f «x»)` → `(f x (▏))` |
+| `]` / `[` | new form | Same with `[]` | `(f «x»)` → `(f x [▏])` |
+| `}` / `{` | new form | Same with `{}` | `(f «x»)` → `(f x {▏})` |
+| `;` | `parry-new-comment` | New comment line above this node | |
+
+If the node sits on its own line, `a`/`i` and the new-form keys open a new,
+indented line instead of adding a space. `▏` is where you start typing.
+
+### 3. Reshaping code
+
+Structural edits. Each one is a single undo step, and brackets always stay
+balanced.
+
+| Key | Command | What it does | Example |
+|---|---|---|---|
+| `d` | `parry-delete` | Delete this node | `(a «b» c)` → `(a «c»)` |
+| `w` | `parry-wrap` | Wrap it in parentheses | `(a «b» c)` → `(a «(b)» c)` |
+| `W` | `parry-splice` | Remove the brackets of the form around it | `(a («b» c) d)` → `(a «b» c d)` |
+| `r` | `parry-raise` | Replace the form around it with just this node | `(a («b» c) d)` → `(a «b» d)` |
+| `A-l` / `A-h` | `parry-swap-next` / `parry-swap-prev` | Swap it with the next / previous node; repeat to keep moving it. Steps over comments, which stay put | `(«a» b c)` → `(b «a» c)` |
+| `s` | `parry-slurp-forward` | Pull the next node into the form around this one | `((«a») b)` → `(«(a b)»)` |
+| `S` | `parry-slurp-backward` | Pull the previous node into the form | `(a («b»))` → `(«(a b)»)` |
+| `b` | `parry-barf-forward` | Push the form's last node out after it | `((a «b»))` → `(«(a)» b)` |
+| `B` | `parry-barf-backward` | Push the form's first node out before it | `((a «b»))` → `(a «(b)»)` |
+| `m` | `parry-toggle-layout` | Put everything after this node on one line, or one per line | `(«a» b c)` ↔ `(a` / `  b` / `  c)` |
+
+`A-` means Alt. On macOS your terminal has to send Option as Alt, e.g. Ghostty
+`macos-option-as-alt = left` (left Option is Alt, right Option still types
+special characters) or iTerm2 "Esc+" for Option.
+
+### 4. Helix inside Parry
+
+Parry takes over Normal mode, but these go straight to Helix:
+
+| Key | What you get |
+|---|---|
+| `:` | Typed commands (`:w`, `:q`, ...) |
+| `space` | The space menu: file picker, buffers, and so on. The whole key sequence goes to Helix |
+| `v` | Select mode, to extend the selection with Helix's own motions. `Esc` returns to Parry on the node you selected |
+
+Any other key does nothing while Parry is active.
+
+### 5. Setup and configuration
+
+Scheme functions for `init.scm`, after `(require "parry/parry.scm")`:
+
+| Function | What it does |
+|---|---|
+| `(set-parry-pass-through! '(":" "space" "v" "g"))` | Choose which first keys go straight to Helix (default `:`, `space`, `v`) |
+| `(set-parry-sibling-style! style)` | Style for the sibling highlights, e.g. `(style-with-bold (style-fg (style) Color/Cyan))` after requiring `helix/components.scm`. `#f` = the theme's `ui.cursor.match` |
+| `(define-parry-dialect name #:extensions ... #:language ...)` | Teach Parry another Lisp dialect (see [Dialects](#dialects)) |
+| `(parry-active?)` | Whether Parry is on, for your own commands |
+| `:parry-self-test` | Run Parry's built-in tests (see [Testing](#testing)) |
 
 While Parry is active the status line shows `PARRY`, and the Normal-mode cursor
 is hidden so the selected node shows as one solid highlight. Your cursor shape
 comes back when you leave Parry or switch to a buffer without a dialect.
-
-The first character of every other node at the current level is marked (with
-your theme's `ui.cursor.match` style), so you can see where `h`/`l` go. Change
-the style with `set-parry-sibling-style!`, e.g.
-`(set-parry-sibling-style! (style-with-bold (style-fg (style) Color/Cyan)))`
-after requiring `helix/components.scm`.
 
 ## Dialects
 
