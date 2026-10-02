@@ -31,24 +31,33 @@ Parry (including the space or newline Parry adds first) is one undo step too.
 
    or from a checkout of the fork with `cargo xtask steel`.
 
-2. Clone Parry into your Helix config directory:
+2. Install Parry with forge (included in the Homebrew formula):
 
    ```sh
-   git clone https://github.com/Jarodwr/parry ~/.config/helix/cogs/parry
+   forge pkg install --git https://github.com/Jarodwr/parry.git
    ```
 
-   (or let a dotfiles manager do it, e.g. a chezmoi `git-repo` external).
+   or declaratively: list it in a `cog.scm` (e.g. `~/.config/helix/cog.scm`)
+   and run `forge build` in that folder:
+
+   ```scheme
+   (define package-name 'helix-config)
+   (define version "0.1.0")
+   (define dependencies
+     '((#:name "parry" #:git-url "https://github.com/Jarodwr/parry.git" #:sha "<commit>")))
+   ```
 
 3. Load it and pick a key to enter it, in `~/.config/helix/init.scm`:
 
    ```scheme
-   (require "cogs/parry/parry.scm")
+   (require "parry/parry.scm")
    (require (only-in "helix/keymaps.scm" keymap))
    (keymap (global) (normal (L ":parry-enter")))
    ```
 
-For development, work in that clone (or symlink a checkout there instead):
-edit, then `:config-reload` in Helix and press your enter key again.
+For development, run `forge install` in your checkout after each change (it
+copies the package into Steel's cogs folder), then `:config-reload` in Helix
+and press your enter key again.
 
 ## Keys
 
